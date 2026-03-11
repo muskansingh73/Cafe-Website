@@ -1,11 +1,11 @@
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE_URL = "https://cafe-website-dzdc.onrender.com";
 
 async function request(path, options = {}) {
   const token = localStorage.getItem("adminToken");
   const headers = { "Content-Type": "application/json", ...options.headers };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   const data = await res.json();
   if (!data.success) throw new Error(data.message || "Request failed");
   return data;
