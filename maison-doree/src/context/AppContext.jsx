@@ -1,21 +1,40 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { INITIAL_MENU, INITIAL_RESERVATIONS } from "../data";
+import { api } from "../services/api";
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [page, setPage] = useState("home");
-  const [menu, setMenu] = useState(INITIAL_MENU);
+  const [page, setPage]               = useState("home");
+  const [menu, setMenu]               = useState(INITIAL_MENU);
   const [reservations, setReservations] = useState(INITIAL_RESERVATIONS);
-  const [cart, setCart] = useState([]);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [adminUser, setAdminUser] = useState(null);
+  const [cart, setCart]               = useState([]);
+  const [cartOpen, setCartOpen]       = useState(false);
+  const [toast, setToast]             = useState(null);
+  const [adminUser, setAdminUser]     = useState(null);
+  const [token, setToken]             = useState(localStorage.getItem("adminToken") || null);
+  const [loading, setLoading]         = useState(false);
+
+  // Load menu from API on mount
+  useEffect(() => {
+    api.getMenu()
+      .then(data => setMenu(data.menu))
+      .catch(() => {}); // fallback to mock data if API fails
+  }, []);
+
+  // Load reservations when admin logs in
+  useEffect(() => {
+    if (token && adminUser) {
+      api.getReservations(token)
+        .then(data => setReservations(data.reservations))
+        .catch(() => {});
+    }
+  }, [token, adminUser]);
 
   function addToCart(item) {
     setCart(c => {
-      const existing = c.find(x => x.id === item.id);
-      if (existing) return c.map(x => x.id === item.id ? { ...x, qty: x.qty + 1 } : x);
+      const existing = c.find(x => x.id === item.id || x._id === item._id);
+      if (existing) return c.map(x => (x.id === item.id || x._id === item._id) ? { ...x, qty: x.qty + 1 } : x);
       return [...c, { ...item, qty: 1 }];
     });
     showToast(`${item.name} added to cart`);
@@ -23,34 +42,47 @@ export function AppProvider({ children }) {
 
   function updateQty(id, delta) {
     setCart(c =>
-      c.map(x => x.id === id ? { ...x, qty: Math.max(0, x.qty + delta) } : x)
+      c.map(x => (x.id === id || x._id === id) ? { ...x, qty: Math.max(0, x.qty + delta) } : x)
        .filter(x => x.qty > 0)
     );
   }
 
   function clearCart() { setCart([]); }
 
-  function addReservation(form) {
-    setReservations(r => [
-      ...r,
-      { ...form, id: Date.now(), status: "pending", guests: Number(form.guests) },
-    ]);
+  async function addReservation(form) {
+    try {
+      const data = await api.createReservation(form);
+      setReservations(r => [data.reservation, ...r]);
+    } catch (err) {
+      // fallback — add locally
+      setReservations(r => [...r, { ...form, id: Date.now(), status: "pending", guests: Number(form.guests) }]);
+    }
   }
 
-  function handleLogin(account) {
-    setAdminUser(account);
-    showToast(`Welcome back, ${account.name}!`);
+  async function handleLogin(credentials) {
+    try {
+      setLoading(true);
+      const data = await api.login(credentials.username, credentials.password);
+      setToken(data.token);
+      localStorage.setItem("adminToken", data.token);
+      setAdminUser({ ...data.admin, avatar: data.admin.avatar || "👑" });
+      showToast(`Welcome back, ${data.admin.name}!`);
+    } catch (err) {
+      throw err; // let AdminLogin handle the error message
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleLogout() {
     setAdminUser(null);
+    setToken(null);
+    localStorage.removeItem("adminToken");
     setPage("home");
     showToast("Signed out successfully.");
   }
 
-  function showToast(msg) {
-    setToast(msg);
-  }
+  function showToast(msg) { setToast(msg); }
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
@@ -61,7 +93,7 @@ export function AppProvider({ children }) {
       reservations, setReservations,
       cart, cartOpen, setCartOpen, cartCount,
       toast, setToast,
-      adminUser,
+      adminUser, token, loading,
       addToCart, updateQty, clearCart,
       addReservation, handleLogin, handleLogout,
     }}>

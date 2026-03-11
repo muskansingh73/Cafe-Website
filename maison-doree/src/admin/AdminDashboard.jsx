@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useApp } from "../context/AppContext";
 import { tagClass } from "../data";
 import Toast from "../components/Toast";
-
+import {api} from "../services/api"
 const S = {
   layout: { display:"flex", minHeight:"100vh", fontFamily:"'Jost',sans-serif" },
   sidebar: { width:260, minWidth:260, background:"#3D2B1F", display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, bottom:0, zIndex:50, overflowY:"auto" },
@@ -72,16 +72,28 @@ const NAV = [
 ];
 
 export default function AdminDashboard() {
-  const { menu, setMenu, reservations, setReservations, adminUser, handleLogout } = useApp();
+  const { menu, setMenu, reservations, setReservations, adminUser, token, handleLogout } = useApp();
   const [tab,      setTab]      = useState("overview");
   const [editItem, setEditItem] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [newItem,  setNewItem]  = useState(null);
   const [toast,    setToast]    = useState(null);
 
-  function approveRes(id) { setReservations(r => r.map(x => x.id===id ? {...x,status:"approved"} : x)); setToast("Reservation approved ✓"); }
-  function declineRes(id) { setReservations(r => r.map(x => x.id===id ? {...x,status:"declined"} : x)); setToast("Reservation declined"); }
-  function openEdit(item) { setEditItem(item); setEditForm({...item}); }
+  async function approveRes(id) {
+  try {
+    await api.updateReservationStatus(id, "approved", token);
+    setReservations(r => r.map(x => x._id === id || x.id === id ? { ...x, status: "approved" } : x));
+    setToast("Reservation approved ✓");
+  } catch (err) { setToast("Failed to update"); }
+}
+
+async function declineRes(id) {
+  try {
+    await api.updateReservationStatus(id, "declined", token);
+    setReservations(r => r.map(x => x._id === id || x.id === id ? { ...x, status: "declined" } : x));
+    setToast("Reservation declined");
+  } catch (err) { setToast("Failed to update"); }
+}
   function saveEdit() {
     setMenu(m => ({...m, [editForm.category]: m[editForm.category].map(x => x.id===editForm.id ? {...editForm, price:Number(editForm.price)} : x)}));
     setEditItem(null); setToast("Menu item updated ✓");

@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useApp } from "../context/AppContext";
-import { ADMIN_ACCOUNTS } from "../data";
+import { useApp } from "@/context/AppContext";
 
 const FEATURES = [
   { icon: "📅", text: "Manage reservations & approvals" },
@@ -21,23 +20,18 @@ export default function AdminLogin() {
     setError("");
   }
 
-  function submit() {
+  async function submit() {
     if (!form.username || !form.password) {
       setError("Please enter both username and password.");
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const account = ADMIN_ACCOUNTS.find(
-        a => a.username === form.username && a.password === form.password
-      );
-      if (account) {
-        handleLogin(account);
-      } else {
-        setError("Invalid username or password. Please try again.");
-        setLoading(false);
-      }
-    }, 800);
+    try {
+      await handleLogin(form);
+    } catch (err) {
+      setError(err.message || "Invalid username or password.");
+      setLoading(false);
+    }
   }
 
   function handleKey(e) { if (e.key === "Enter") submit(); }
@@ -75,7 +69,7 @@ export default function AdminLogin() {
           <div className="login-hint">
             <strong>Demo credentials:</strong><br />
             Username: <strong>admin</strong> · Password: <strong>maison2026</strong><br />
-            Username: <strong>manager</strong> · Password: <strong>dorée123</strong>
+            Username: <strong>manager</strong> · Password: <strong>doree123</strong>
           </div>
 
           {error && (
