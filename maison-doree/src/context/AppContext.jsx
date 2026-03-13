@@ -5,27 +5,27 @@ import { api } from "../services/api";
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [page, setPage]               = useState("home");
-  const [menu, setMenu]               = useState(INITIAL_MENU);
+  const [page, setPage]                 = useState("home");
+  const [menu, setMenu]                 = useState(INITIAL_MENU);
   const [reservations, setReservations] = useState(INITIAL_RESERVATIONS);
-  const [cart, setCart]               = useState([]);
-  const [cartOpen, setCartOpen]       = useState(false);
-  const [toast, setToast]             = useState(null);
-  const [adminUser, setAdminUser]     = useState(null);
-  const [token, setToken]             = useState(localStorage.getItem("adminToken") || null);
-  const [loading, setLoading]         = useState(false);
+  const [cart, setCart]                 = useState([]);
+  const [cartOpen, setCartOpen]         = useState(false);
+  const [toast, setToast]               = useState(null);
+  const [adminUser, setAdminUser]       = useState(null);
+  const [token, setToken]               = useState(localStorage.getItem("adminToken") || null);
+  const [loading, setLoading]           = useState(false);
 
   // Load menu from API on mount
   useEffect(() => {
     api.getMenu()
       .then(data => setMenu(data.menu))
-      .catch(() => {}); // fallback to mock data if API fails
+      .catch(() => {});
   }, []);
 
   // Load reservations when admin logs in
   useEffect(() => {
     if (token && adminUser) {
-      api.getReservations(token)
+      api.getReservations()
         .then(data => setReservations(data.reservations))
         .catch(() => {});
     }
@@ -54,7 +54,6 @@ export function AppProvider({ children }) {
       const data = await api.createReservation(form);
       setReservations(r => [data.reservation, ...r]);
     } catch (err) {
-      // fallback — add locally
       setReservations(r => [...r, { ...form, id: Date.now(), status: "pending", guests: Number(form.guests) }]);
     }
   }
@@ -62,13 +61,16 @@ export function AppProvider({ children }) {
   async function handleLogin(credentials) {
     try {
       setLoading(true);
-      const data = await api.login(credentials.username, credentials.password);
+      const data = await api.login({
+        username: credentials.username,
+        password: credentials.password,
+      });
       setToken(data.token);
       localStorage.setItem("adminToken", data.token);
-      setAdminUser({ ...data.admin, avatar: data.admin.avatar || "👑" });
+      setAdminUser({ ...data.admin });
       showToast(`Welcome back, ${data.admin.name}!`);
     } catch (err) {
-      throw err; // let AdminLogin handle the error message
+      throw err;
     } finally {
       setLoading(false);
     }

@@ -13,18 +13,21 @@ async function request(path, options = {}) {
 
 export const api = {
   // ── AUTH ──────────────────────────────────────────────────────
-  login: (body) => request("/api/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  login: (body) => request("/api/auth/login", { method:"POST", body:JSON.stringify(body) }),
 
   // ── MENU ──────────────────────────────────────────────────────
   getMenu: () => request("/api/menu"),
+  addMenuItem: (body) => request("/api/menu", { method:"POST", body:JSON.stringify(body) }),
+  updateMenuItem: (id, body) => request(`/api/menu/${id}`, { method:"PUT", body:JSON.stringify(body) }),
+  deleteMenuItem: (id) => request(`/api/menu/${id}`, { method:"DELETE" }),
 
   // ── RESERVATIONS ──────────────────────────────────────────────
-  createReservation: (body) => request("/api/reservations", { method: "POST", body: JSON.stringify(body) }),
+  createReservation: (body) => request("/api/reservations", { method:"POST", body:JSON.stringify(body) }),
   getReservations: () => request("/api/reservations"),
-  updateReservationStatus: (id, status) => request(`/api/reservations/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  updateReservationStatus: (id, status) => request(`/api/reservations/${id}/status`, { method:"PATCH", body:JSON.stringify({ status }) }),
 
   // ── ORDERS ────────────────────────────────────────────────────
-  createOrder: (body) => request("/api/orders", { method: "POST", body: JSON.stringify(body) }),
+  createOrder: (body) => request("/api/orders", { method:"POST", body:JSON.stringify(body) }),
   getOrders: () => request("/api/orders"),
-  updateOrderStatus: (id, status) => request(`/api/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  updateOrderStatus: (id, status) => request(`/api/orders/${id}/status`, { method:"PATCH", body:JSON.stringify({ status }) }),
 };

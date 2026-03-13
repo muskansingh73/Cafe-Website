@@ -1,7 +1,6 @@
 const express = require("express");
 const jwt     = require("jsonwebtoken");
 const Admin   = require("../models/Admin");
-const { protect } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -30,19 +29,19 @@ router.post("/login", async (req, res, next) => {
 });
 
 // Get current admin
-router.get("/me", protect, (req, res) => {
-  res.json({ success: true, admin: req.admin });
+router.get("/me", async (req, res, next) => {
+  res.json({ success: true });
 });
 
-// Seed admin accounts — run once then leave it
+// Seed admin accounts
 router.post("/seed", async (req, res, next) => {
   try {
     const exists = await Admin.findOne({ username: "admin" });
     if (exists) return res.json({ success: false, message: "Already seeded" });
-    await Admin.insertMany([
-      { username: "admin",   password: "maison2026", name: "Head Administrator", role: "Super Admin", avatar: "👑" },
-      { username: "manager", password: "doree123",   name: "Floor Manager",      role: "Manager",    avatar: "🧑‍💼" },
-    ]);
+
+    await Admin.create({ username: "admin",   password: "maison2026", name: "Head Administrator", role: "Super Admin", avatar: "👑" });
+    await Admin.create({ username: "manager", password: "doree123",   name: "Floor Manager",      role: "Manager",    avatar: "🧑‍💼" });
+
     res.json({ success: true, message: "Admin accounts created ✓" });
   } catch (err) { next(err); }
 });

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useApp } from "../context/AppContext";
-import { tagClass } from "../data";
 import Toast from "../components/Toast";
-import {api} from "../services/api"
+import { api } from "../services/api";
+
 const S = {
   layout: { display:"flex", minHeight:"100vh", fontFamily:"'Jost',sans-serif" },
   sidebar: { width:260, minWidth:260, background:"#3D2B1F", display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, bottom:0, zIndex:50, overflowY:"auto" },
@@ -53,15 +53,24 @@ const S = {
 };
 
 function badge(status) {
-  const map = { pending:{background:"#FEF3C7",color:"#92400E"}, approved:{background:"#D1FAE5",color:"#065F46"}, declined:{background:"#FEE2E2",color:"#991B1B"}, preparing:{background:"#FEE2E2",color:"#991B1B"}, ready:{background:"#FEF3C7",color:"#92400E"}, delivered:{background:"#D1FAE5",color:"#065F46"} };
-  const s = map[status] || {background:"#F3F4F6",color:"#374151"};
+  const map = {
+    pending:   { background:"#FEF3C7", color:"#92400E" },
+    approved:  { background:"#D1FAE5", color:"#065F46" },
+    declined:  { background:"#FEE2E2", color:"#991B1B" },
+    preparing: { background:"#FEE2E2", color:"#991B1B" },
+    ready:     { background:"#FEF3C7", color:"#92400E" },
+    delivered: { background:"#D1FAE5", color:"#065F46" },
+    confirmed: { background:"#D1FAE5", color:"#065F46" },
+    cancelled: { background:"#FEE2E2", color:"#991B1B" },
+  };
+  const s = map[status] || { background:"#F3F4F6", color:"#374151" };
   return { display:"inline-block", padding:"4px 12px", borderRadius:20, fontSize:11, fontWeight:500, ...s };
 }
 
 const SAMPLE_ORDERS = [
-  { id:"#1042", cust:"Aarav Mehta",   items:"Truffle Pasta, Wagyu Burger",  total:"$48", type:"Delivery", status:"preparing" },
-  { id:"#1041", cust:"Zara Williams", items:"Acai Bowl, Avocado Toast",     total:"$29", type:"Pickup",   status:"ready" },
-  { id:"#1040", cust:"Rahul Gupta",   items:"Lobster Thermidor, Risotto",   total:"$90", type:"Delivery", status:"delivered" },
+  { id:"#1042", cust:"Aarav Mehta",   items:"Truffle Pasta, Wagyu Burger", total:"$48", type:"Delivery", status:"preparing" },
+  { id:"#1041", cust:"Zara Williams", items:"Acai Bowl, Avocado Toast",    total:"$29", type:"Pickup",   status:"ready" },
+  { id:"#1040", cust:"Rahul Gupta",   items:"Lobster Thermidor, Risotto",  total:"$90", type:"Delivery", status:"delivered" },
 ];
 
 const NAV = [
@@ -71,42 +80,72 @@ const NAV = [
   { id:"orders",       icon:"🛵", label:"Online Orders" },
 ];
 
+const EMPTY = { name:"", desc:"", price:"", category:"breakfast", tag:"", img:"🍽️" };
+
 export default function AdminDashboard() {
-  const { menu, setMenu, reservations, setReservations, adminUser, token, handleLogout } = useApp();
+  const { menu, setMenu, reservations, setReservations, adminUser, handleLogout } = useApp();
   const [tab,      setTab]      = useState("overview");
   const [editItem, setEditItem] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [newItem,  setNewItem]  = useState(null);
   const [toast,    setToast]    = useState(null);
 
+  // ── Reservations ──────────────────────────────────────────────
   async function approveRes(id) {
-  try {
-    await api.updateReservationStatus(id, "approved", token);
-    setReservations(r => r.map(x => x._id === id || x.id === id ? { ...x, status: "approved" } : x));
-    setToast("Reservation approved ✓");
-  } catch (err) { setToast("Failed to update"); }
-}
+    try {
+      await api.updateReservationStatus(id, "approved");
+      setReservations(r => r.map(x => (x._id===id||x.id===id) ? {...x, status:"approved"} : x));
+      setToast("Reservation approved ✓");
+    } catch { setToast("Failed to update"); }
+  }
 
-async function declineRes(id) {
-  try {
-    await api.updateReservationStatus(id, "declined", token);
-    setReservations(r => r.map(x => x._id === id || x.id === id ? { ...x, status: "declined" } : x));
-    setToast("Reservation declined");
-  } catch (err) { setToast("Failed to update"); }
-}
-  function saveEdit() {
-    setMenu(m => ({...m, [editForm.category]: m[editForm.category].map(x => x.id===editForm.id ? {...editForm, price:Number(editForm.price)} : x)}));
-    setEditItem(null); setToast("Menu item updated ✓");
+  async function declineRes(id) {
+    try {
+      await api.updateReservationStatus(id, "declined");
+      setReservations(r => r.map(x => (x._id===id||x.id===id) ? {...x, status:"declined"} : x));
+      setToast("Reservation declined");
+    } catch { setToast("Failed to update"); }
   }
-  function deleteItem(item) {
-    setMenu(m => ({...m, [item.category]: m[item.category].filter(x => x.id!==item.id)}));
-    setToast("Item removed");
+
+  // ── Menu ──────────────────────────────────────────────────────
+  function openEdit(item) { setEditItem(item); setEditForm({...item}); }
+  function openAdd()      { setNewItem({...EMPTY}); }
+
+  async function saveEdit() {
+    try {
+      const data = await api.updateMenuItem(editForm._id || editForm.id, {
+        name:editForm.name, desc:editForm.desc, price:Number(editForm.price),
+        category:editForm.category, tag:editForm.tag, img:editForm.img,
+      });
+      setMenu(m => ({...m, [data.item.category]: m[data.item.category]?.map(x =>
+        (x._id||x.id)===(data.item._id||data.item.id) ? data.item : x
+      ) || []}));
+      setEditItem(null);
+      setToast("Menu item updated ✓");
+    } catch { setToast("Failed to update item"); }
   }
-  function openAdd() { setNewItem({id:Date.now(), name:"", desc:"", price:"", category:"breakfast", tag:"", img:"🍽️"}); }
-  function saveNew() {
-    if (!newItem.name||!newItem.price) { alert("Name and price required"); return; }
-    setMenu(m => ({...m, [newItem.category]: [...m[newItem.category], {...newItem, price:Number(newItem.price)}]}));
-    setNewItem(null); setToast("Item added ✓");
+
+  async function deleteItem(item) {
+    try {
+      await api.deleteMenuItem(item._id || item.id);
+      setMenu(m => ({...m, [item.category]: m[item.category].filter(x =>
+        (x._id||x.id) !== (item._id||item.id)
+      )}));
+      setToast("Item removed");
+    } catch { setToast("Failed to delete item"); }
+  }
+
+  async function saveNew() {
+    if (!newItem.name || !newItem.price) { alert("Name and price required"); return; }
+    try {
+      const data = await api.addMenuItem({
+        name:newItem.name, desc:newItem.desc, price:Number(newItem.price),
+        category:newItem.category, tag:newItem.tag, img:newItem.img,
+      });
+      setMenu(m => ({...m, [data.item.category]: [...(m[data.item.category]||[]), data.item]}));
+      setNewItem(null);
+      setToast("Item added ✓");
+    } catch { setToast("Failed to add item"); }
   }
 
   const pending  = reservations.filter(r => r.status==="pending").length;
@@ -120,7 +159,7 @@ async function declineRes(id) {
     borderLeft: active ? "3px solid #C9A84C" : "3px solid transparent",
     borderTop:"none", borderRight:"none", borderBottom:"none",
     width:"100%", textAlign:"left", cursor:"pointer",
-    fontFamily:"'Jost',sans-serif", transition:"all 0.2s"
+    fontFamily:"'Jost',sans-serif", transition:"all 0.2s",
   });
 
   return (
@@ -148,10 +187,8 @@ async function declineRes(id) {
         </div>
       </aside>
 
-      {/* ── Main Content ── */}
+      {/* ── Main ── */}
       <div style={S.content}>
-
-        {/* Topbar */}
         <div style={S.topbar}>
           <div style={S.topbarTitle}>{curNav?.icon} {curNav?.label}</div>
           <div style={{display:"flex", alignItems:"center", gap:16}}>
@@ -181,7 +218,7 @@ async function declineRes(id) {
               <div style={S.statCard}>
                 <div style={S.statVal}>{pending}</div>
                 <div style={S.statLabel}>Pending Approval</div>
-                <div style={pending>0 ? S.statDown : S.statUp}>{pending>0 ? "Needs attention" : "All clear"}</div>
+                <div style={pending>0?S.statDown:S.statUp}>{pending>0?"Needs attention":"All clear"}</div>
               </div>
               <div style={S.statCard}>
                 <div style={S.statVal}>{allItems.length}</div>
@@ -197,17 +234,15 @@ async function declineRes(id) {
             <div style={S.tableWrap}>
               <div style={S.tableHead}><span style={S.tableTitle}>Recent Reservations</span></div>
               <table style={S.table}>
-                <thead>
-                  <tr>
-                    <th style={S.th}>Guest</th>
-                    <th style={S.th}>Date & Time</th>
-                    <th style={S.th}>Guests</th>
-                    <th style={S.th}>Status</th>
-                  </tr>
-                </thead>
+                <thead><tr>
+                  <th style={S.th}>Guest</th>
+                  <th style={S.th}>Date & Time</th>
+                  <th style={S.th}>Guests</th>
+                  <th style={S.th}>Status</th>
+                </tr></thead>
                 <tbody>
-                  {reservations.slice(0,4).map(r => (
-                    <tr key={r.id}>
+                  {reservations.slice(0,4).map((r,i) => (
+                    <tr key={r._id||r.id||i}>
                       <td style={S.td}><strong>{r.name}</strong><br/><span style={{color:"#8A7E74",fontSize:12}}>{r.email}</span></td>
                       <td style={S.td}>{r.date}<br/><span style={{color:"#8A7E74",fontSize:12}}>{r.time}</span></td>
                       <td style={S.td}>{r.guests} pax</td>
@@ -227,20 +262,18 @@ async function declineRes(id) {
               <div style={S.tableHead}><span style={S.tableTitle}>All Bookings</span></div>
               <div style={{overflowX:"auto"}}>
                 <table style={S.table}>
-                  <thead>
-                    <tr>
-                      <th style={S.th}>Guest</th>
-                      <th style={S.th}>Contact</th>
-                      <th style={S.th}>Date & Time</th>
-                      <th style={S.th}>Guests</th>
-                      <th style={S.th}>Note</th>
-                      <th style={S.th}>Status</th>
-                      <th style={S.th}>Actions</th>
-                    </tr>
-                  </thead>
+                  <thead><tr>
+                    <th style={S.th}>Guest</th>
+                    <th style={S.th}>Contact</th>
+                    <th style={S.th}>Date & Time</th>
+                    <th style={S.th}>Guests</th>
+                    <th style={S.th}>Note</th>
+                    <th style={S.th}>Status</th>
+                    <th style={S.th}>Actions</th>
+                  </tr></thead>
                   <tbody>
-                    {reservations.map(r => (
-                      <tr key={r.id}>
+                    {reservations.map((r,i) => (
+                      <tr key={r._id||r.id||i}>
                         <td style={S.td}><strong>{r.name}</strong></td>
                         <td style={S.td}><span style={{fontSize:12}}>{r.email}<br/>{r.phone}</span></td>
                         <td style={S.td}>{r.date}<br/><span style={{color:"#8A7E74",fontSize:12}}>{r.time}</span></td>
@@ -249,8 +282,8 @@ async function declineRes(id) {
                         <td style={S.td}><span style={badge(r.status)}>{r.status}</span></td>
                         <td style={S.tdLast}>
                           {r.status==="pending" ? <>
-                            <button style={S.approveBtn} onClick={() => approveRes(r.id)}>Approve</button>
-                            <button style={S.declineBtn} onClick={() => declineRes(r.id)}>Decline</button>
+                            <button style={S.approveBtn} onClick={() => approveRes(r._id||r.id)}>Approve</button>
+                            <button style={S.declineBtn} onClick={() => declineRes(r._id||r.id)}>Decline</button>
                           </> : <span style={{fontSize:12,color:"#8A7E74"}}>—</span>}
                         </td>
                       </tr>
@@ -276,24 +309,20 @@ async function declineRes(id) {
                 <div style={S.tableWrap}>
                   <div style={{overflowX:"auto"}}>
                     <table style={S.table}>
-                      <thead>
-                        <tr>
-                          <th style={S.th}>Item</th>
-                          <th style={S.th}>Description</th>
-                          <th style={S.th}>Price</th>
-                          <th style={S.th}>Tag</th>
-                          <th style={S.th}>Actions</th>
-                        </tr>
-                      </thead>
+                      <thead><tr>
+                        <th style={S.th}>Item</th>
+                        <th style={S.th}>Description</th>
+                        <th style={S.th}>Price</th>
+                        <th style={S.th}>Tag</th>
+                        <th style={S.th}>Actions</th>
+                      </tr></thead>
                       <tbody>
-                        {(menu[cat]||[]).map(item => (
-                          <tr key={item.id}>
+                        {(menu[cat]||[]).map((item,i) => (
+                          <tr key={item._id||item.id||i}>
                             <td style={S.td}><span style={{fontSize:20,marginRight:8}}>{item.img}</span><strong>{item.name}</strong></td>
                             <td style={S.td}><span style={{fontSize:12,color:"#8A7E74"}}>{item.desc}</span></td>
                             <td style={S.td}><strong>${item.price}</strong></td>
-                            <td style={S.td}>
-                              {item.tag && <span style={{fontSize:10,padding:"3px 10px",borderRadius:20,background:"#FEF3C7",color:"#92400E",fontWeight:500}}>{item.tag}</span>}
-                            </td>
+                            <td style={S.td}>{item.tag && <span style={{fontSize:10,padding:"3px 10px",borderRadius:20,background:"#FEF3C7",color:"#92400E",fontWeight:500}}>{item.tag}</span>}</td>
                             <td style={S.tdLast}>
                               <button style={S.approveBtn} onClick={() => openEdit(item)}>Edit</button>
                               <button style={S.declineBtn} onClick={() => deleteItem(item)}>Delete</button>
@@ -315,16 +344,14 @@ async function declineRes(id) {
             <div style={S.tableWrap}>
               <div style={S.tableHead}><span style={S.tableTitle}>Today's Orders</span></div>
               <table style={S.table}>
-                <thead>
-                  <tr>
-                    <th style={S.th}>Order ID</th>
-                    <th style={S.th}>Customer</th>
-                    <th style={S.th}>Items</th>
-                    <th style={S.th}>Total</th>
-                    <th style={S.th}>Type</th>
-                    <th style={S.th}>Status</th>
-                  </tr>
-                </thead>
+                <thead><tr>
+                  <th style={S.th}>Order ID</th>
+                  <th style={S.th}>Customer</th>
+                  <th style={S.th}>Items</th>
+                  <th style={S.th}>Total</th>
+                  <th style={S.th}>Type</th>
+                  <th style={S.th}>Status</th>
+                </tr></thead>
                 <tbody>
                   {SAMPLE_ORDERS.map(o => (
                     <tr key={o.id}>
@@ -402,5 +429,3 @@ async function declineRes(id) {
     </div>
   );
 }
-
-
