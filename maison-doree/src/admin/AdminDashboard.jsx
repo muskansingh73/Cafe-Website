@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import Toast from "../components/Toast";
 import { api } from "../services/api";
@@ -54,24 +54,19 @@ const S = {
 
 function badge(status) {
   const map = {
-    pending:   { background:"#FEF3C7", color:"#92400E" },
-    approved:  { background:"#D1FAE5", color:"#065F46" },
-    declined:  { background:"#FEE2E2", color:"#991B1B" },
-    preparing: { background:"#FEE2E2", color:"#991B1B" },
-    ready:     { background:"#FEF3C7", color:"#92400E" },
-    delivered: { background:"#D1FAE5", color:"#065F46" },
-    confirmed: { background:"#D1FAE5", color:"#065F46" },
-    cancelled: { background:"#FEE2E2", color:"#991B1B" },
+    pending:          { background:"#FEF3C7", color:"#92400E" },
+    approved:         { background:"#D1FAE5", color:"#065F46" },
+    declined:         { background:"#FEE2E2", color:"#991B1B" },
+    preparing:        { background:"#FEE2E2", color:"#991B1B" },
+    ready:            { background:"#FEF3C7", color:"#92400E" },
+    delivered:        { background:"#D1FAE5", color:"#065F46" },
+    confirmed:        { background:"#D1FAE5", color:"#065F46" },
+    out_for_delivery: { background:"#DBEAFE", color:"#1E40AF" },
+    cancelled:        { background:"#FEE2E2", color:"#991B1B" },
   };
   const s = map[status] || { background:"#F3F4F6", color:"#374151" };
   return { display:"inline-block", padding:"4px 12px", borderRadius:20, fontSize:11, fontWeight:500, ...s };
 }
-
-const SAMPLE_ORDERS = [
-  { id:"#1042", cust:"Aarav Mehta",   items:"Truffle Pasta, Wagyu Burger", total:"$48", type:"Delivery", status:"preparing" },
-  { id:"#1041", cust:"Zara Williams", items:"Acai Bowl, Avocado Toast",    total:"$29", type:"Pickup",   status:"ready" },
-  { id:"#1040", cust:"Rahul Gupta",   items:"Lobster Thermidor, Risotto",  total:"$90", type:"Delivery", status:"delivered" },
-];
 
 const NAV = [
   { id:"overview",     icon:"📊", label:"Overview" },
@@ -89,6 +84,15 @@ export default function AdminDashboard() {
   const [editForm, setEditForm] = useState({});
   const [newItem,  setNewItem]  = useState(null);
   const [toast,    setToast]    = useState(null);
+  const [orders,   setOrders]   = useState([]);
+
+  useEffect(() => {
+    if (adminUser) {
+      api.getOrders()
+        .then(data => setOrders(data.orders))
+        .catch(() => {});
+    }
+  }, [adminUser]);
 
   // ── Reservations ──────────────────────────────────────────────
   async function approveRes(id) {
@@ -342,7 +346,7 @@ export default function AdminDashboard() {
             <div style={S.pageTitle}>Online Orders</div>
             <div style={S.pageSubtitle}>Manage incoming delivery and pickup orders</div>
             <div style={S.tableWrap}>
-              <div style={S.tableHead}><span style={S.tableTitle}>Today's Orders</span></div>
+              <div style={S.tableHead}><span style={S.tableTitle}>All Orders</span></div>
               <table style={S.table}>
                 <thead><tr>
                   <th style={S.th}>Order ID</th>
@@ -353,12 +357,15 @@ export default function AdminDashboard() {
                   <th style={S.th}>Status</th>
                 </tr></thead>
                 <tbody>
-                  {SAMPLE_ORDERS.map(o => (
-                    <tr key={o.id}>
-                      <td style={S.td}><strong>{o.id}</strong></td>
-                      <td style={S.td}>{o.cust}</td>
-                      <td style={S.td}><span style={{fontSize:12,color:"#8A7E74"}}>{o.items}</span></td>
-                      <td style={S.td}><strong>{o.total}</strong></td>
+                  {orders.length===0 && (
+                    <tr><td colSpan={6} style={{...S.td, textAlign:"center", color:"#8A7E74"}}>No orders yet</td></tr>
+                  )}
+                  {orders.map((o,i) => (
+                    <tr key={o._id||i}>
+                      <td style={S.td}><strong>#{o._id?.slice(-6).toUpperCase()}</strong></td>
+                      <td style={S.td}>{o.customer?.name}<br/><span style={{fontSize:12,color:"#8A7E74"}}>{o.customer?.phone}</span></td>
+                      <td style={S.td}><span style={{fontSize:12,color:"#8A7E74"}}>{o.items?.map(x => `${x.name} x${x.qty}`).join(", ")}</span></td>
+                      <td style={S.td}><strong>₹{o.total}</strong></td>
                       <td style={S.td}>{o.type}</td>
                       <td style={S.td}><span style={badge(o.status)}>{o.status}</span></td>
                     </tr>

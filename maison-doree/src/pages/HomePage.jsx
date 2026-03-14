@@ -1,9 +1,9 @@
 import { useApp } from "../context/AppContext";
-import { INITIAL_MENU } from "../data";
 import MenuCard from "../components/MenuCard";
 
 export default function HomePage() {
-  const { setPage, addToCart } = useApp();
+  const { setPage, addToCart, menu} = useApp();
+  
 
   return (
     <>
@@ -69,9 +69,11 @@ export default function HomePage() {
           </p>
         </div>
         <div className="menu-grid">
-          {[INITIAL_MENU.breakfast[0], INITIAL_MENU.lunch[2], INITIAL_MENU.dinner[0]].map(item => (
-            <MenuCard key={item.id} item={item} onAdd={addToCart} />
-          ))}
+          {[...(menu.breakfast||[]), ...(menu.lunch||[]), ...(menu.dinner||[])]
+  .slice(0, 3)
+  .map((item, i) => (
+    <MenuCard key={item._id||item.id||i} item={item} onAdd={addToCart} />
+  ))}
         </div>
         <div style={{ textAlign: "center", marginTop: 48 }}>
           <button className="btn-primary" onClick={() => setPage("menu")}>

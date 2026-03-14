@@ -31,21 +31,22 @@ export function AppProvider({ children }) {
     }
   }, [token, adminUser]);
 
-  function addToCart(item) {
-    setCart(c => {
-      const existing = c.find(x => x.id === item.id || x._id === item._id);
-      if (existing) return c.map(x => (x.id === item.id || x._id === item._id) ? { ...x, qty: x.qty + 1 } : x);
-      return [...c, { ...item, qty: 1 }];
-    });
-    showToast(`${item.name} added to cart`);
-  }
+ function addToCart(item) {
+  const itemId = item._id || item.id;
+  setCart(c => {
+    const existing = c.find(x => (x._id || x.id) === itemId);
+    if (existing) return c.map(x => (x._id || x.id) === itemId ? { ...x, qty: x.qty + 1 } : x);
+    return [...c, { ...item, qty: 1 }];
+  });
+  showToast(`${item.name} added to cart`);
+}
 
   function updateQty(id, delta) {
-    setCart(c =>
-      c.map(x => (x.id === id || x._id === id) ? { ...x, qty: Math.max(0, x.qty + delta) } : x)
-       .filter(x => x.qty > 0)
-    );
-  }
+  setCart(c =>
+    c.map(x => (x._id || x.id) === id ? { ...x, qty: Math.max(0, x.qty + delta) } : x)
+     .filter(x => x.qty > 0)
+  );
+}
 
   function clearCart() { setCart([]); }
 
