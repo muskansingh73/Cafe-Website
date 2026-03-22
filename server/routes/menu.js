@@ -15,28 +15,42 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Admin — create item with optional image
+// Admin — create item with optional image upload OR image URL
 router.post("/", protect, upload.single("image"), async (req, res, next) => {
   try {
-    const { name, desc, price, category, tag, img } = req.body;
+    const { name, desc, price, category, tag, img, imageUrl } = req.body;
     const item = await MenuItem.create({
       name, desc, price: Number(price), category, tag, img,
-      imageUrl: req.file?.path     || "",
+      imageUrl: req.file?.path || imageUrl || "",
       imageId:  req.file?.filename || "",
     });
     res.status(201).json({ success: true, item });
   } catch (err) { next(err); }
 });
 
-// Admin — update item
+// Admin — update item with optional image upload OR image URL
 router.put("/:id", protect, upload.single("image"), async (req, res, next) => {
   try {
     const item = await MenuItem.findById(req.params.id);
     if (!item) return res.status(404).json({ success: false, message: "Item not found" });
+
+    // If new file uploaded, delete old from Cloudinary
     if (req.file && item.imageId) await cloudinary.uploader.destroy(item.imageId);
+
     const updates = { ...req.body, price: Number(req.body.price) };
-    if (req.file) { updates.imageUrl = req.file.path; updates.imageId = req.file.filename; }
-    const updated = await MenuItem.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+
+    if (req.file) {
+      // File upload takes priority
+      updates.imageUrl = req.file.path;
+      updates.imageId  = req.file.filename;
+    } else if (req.body.imageUrl !== undefined) {
+      // URL provided
+      updates.imageUrl = req.body.imageUrl;
+    }
+
+    const updated = await MenuItem.findByIdAndUpdate(
+      req.params.id, updates, { new: true, runValidators: true }
+    );
     res.json({ success: true, item: updated });
   } catch (err) { next(err); }
 });
@@ -62,7 +76,7 @@ router.post("/seed", protect, async (req, res, next) => {
       { name:"French Benedict",         desc:"English muffin, Canadian bacon, hollandaise, microgreens",  price:16, category:"breakfast", tag:"Chef's Pick", img:"🍳" },
       { name:"Overnight Oats",          desc:"Rolled oats, chia seeds, seasonal berries, honey drizzle",  price:11, category:"breakfast", tag:"Healthy",    img:"🥣" },
       { name:"Crêpe Suzette",           desc:"Thin crêpes, orange butter sauce, candied zest, cream",     price:13, category:"breakfast", tag:"",           img:"🥞" },
-      { name:"Full Brunch Board",       desc:"Eggs, bacon, sausage, beans, grilled tomato, toast",        price:22, category:"breakfast", tag:"Sharing",    img:"🍽️"},
+      { name:"Full Brunch Board",       desc:"Eggs, bacon, sausage, beans, grilled tomato, toast",        price:22, category:"breakfast", tag:"Sharing",    img:"🍽️" },
       { name:"Acai Bowl",               desc:"Blended acai, banana, granola, coconut flakes, honey",      price:15, category:"breakfast", tag:"Vegan",      img:"🍇" },
       { name:"Truffle Mushroom Pasta",  desc:"Pappardelle, wild mushrooms, truffle oil, parmesan",        price:22, category:"lunch",     tag:"Chef's Pick", img:"🍝" },
       { name:"Grilled Salmon Salad",    desc:"Atlantic salmon, quinoa, roasted veg, lemon vinaigrette",   price:24, category:"lunch",     tag:"Healthy",    img:"🐟" },

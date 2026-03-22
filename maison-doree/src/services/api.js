@@ -17,9 +17,44 @@ export const api = {
 
   // ── MENU ──────────────────────────────────────────────────────
   getMenu: () => request("/api/menu"),
-  addMenuItem: (body) => request("/api/menu", { method:"POST", body:JSON.stringify(body) }),
-  updateMenuItem: (id, body) => request(`/api/menu/${id}`, { method:"PUT", body:JSON.stringify(body) }),
-  deleteMenuItem: (id) => request(`/api/menu/${id}`, { method:"DELETE" }),
+  addMenuItem: async (body, imageFile) => {
+  const token = localStorage.getItem("adminToken");
+  if (imageFile) {
+    const formData = new FormData();
+    Object.entries(body).forEach(([k, v]) => formData.append(k, v));
+    formData.append("image", imageFile);
+    const res = await fetch(`${BASE_URL}/api/menu`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    return data;
+  }
+  return request("/api/menu", { method:"POST", body:JSON.stringify(body) });
+},
+
+updateMenuItem: async (id, body, imageFile) => {
+  const token = localStorage.getItem("adminToken");
+  if (imageFile) {
+    const formData = new FormData();
+    Object.entries(body).forEach(([k, v]) => formData.append(k, v));
+    formData.append("image", imageFile);
+    const res = await fetch(`${BASE_URL}/api/menu/${id}`, {
+      method: "PUT",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    return data;
+  }
+  return request(`/api/menu/${id}`, { method:"PUT", body:JSON.stringify(body) });
+},
+
+deleteMenuItem: (id) => request(`/api/menu/${id}`, { method:"DELETE" }),
+
 
   // ── RESERVATIONS ──────────────────────────────────────────────
   createReservation: (body) => request("/api/reservations", { method:"POST", body:JSON.stringify(body) }),

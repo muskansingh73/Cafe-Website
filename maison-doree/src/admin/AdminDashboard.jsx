@@ -42,7 +42,7 @@ const S = {
   addBtn: { background:"#3D2B1F", color:"#F5EFE4", border:"none", padding:"12px 24px", borderRadius:2, fontSize:12, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", fontFamily:"'Jost',sans-serif" },
   catTitle: { fontFamily:"'Cormorant Garamond',serif", fontSize:24, fontWeight:300, color:"#3D2B1F", marginBottom:12, textTransform:"capitalize" },
   overlay: { position:"fixed", inset:0, background:"rgba(28,28,26,0.6)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:24 },
-  modal: { background:"#FFFFFF", borderRadius:6, padding:40, width:"100%", maxWidth:520, boxShadow:"0 12px 48px rgba(28,28,26,0.2)" },
+  modal: { background:"#FFFFFF", borderRadius:6, padding:40, width:"100%", maxWidth:520, boxShadow:"0 12px 48px rgba(28,28,26,0.2)", maxHeight:"90vh", overflowY:"auto" },
   modalTitle: { fontFamily:"'Cormorant Garamond',serif", fontSize:28, fontWeight:600, color:"#3D2B1F", marginBottom:28 },
   formGroup: { display:"flex", flexDirection:"column", gap:6, marginBottom:18 },
   formLabel: { fontSize:11, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase", color:"#3D2B1F" },
@@ -75,16 +75,18 @@ const NAV = [
   { id:"orders",       icon:"🛵", label:"Online Orders" },
 ];
 
-const EMPTY = { name:"", desc:"", price:"", category:"breakfast", tag:"", img:"🍽️" };
+const EMPTY = { name:"", desc:"", price:"", category:"breakfast", tag:"", img:"🍽️", imageUrl:"" };
 
 export default function AdminDashboard() {
   const { menu, setMenu, reservations, setReservations, adminUser, handleLogout } = useApp();
-  const [tab,      setTab]      = useState("overview");
-  const [editItem, setEditItem] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [newItem,  setNewItem]  = useState(null);
-  const [toast,    setToast]    = useState(null);
-  const [orders,   setOrders]   = useState([]);
+  const [tab,           setTab]           = useState("overview");
+  const [editItem,      setEditItem]      = useState(null);
+  const [editForm,      setEditForm]      = useState({});
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [newItem,       setNewItem]       = useState(null);
+  const [newImageFile,  setNewImageFile]  = useState(null);
+  const [toast,         setToast]         = useState(null);
+  const [orders,        setOrders]        = useState([]);
 
   useEffect(() => {
     if (adminUser) {
@@ -112,19 +114,21 @@ export default function AdminDashboard() {
   }
 
   // ── Menu ──────────────────────────────────────────────────────
-  function openEdit(item) { setEditItem(item); setEditForm({...item}); }
-  function openAdd()      { setNewItem({...EMPTY}); }
+  function openEdit(item) { setEditItem(item); setEditForm({...item}); setEditImageFile(null); }
+  function openAdd()      { setNewItem({...EMPTY}); setNewImageFile(null); }
 
   async function saveEdit() {
     try {
-      const data = await api.updateMenuItem(editForm._id || editForm.id, {
-        name:editForm.name, desc:editForm.desc, price:Number(editForm.price),
-        category:editForm.category, tag:editForm.tag, img:editForm.img,
-      });
+      const data = await api.updateMenuItem(
+        editForm._id || editForm.id,
+        { name:editForm.name, desc:editForm.desc, price:Number(editForm.price), category:editForm.category, tag:editForm.tag, img:editForm.img, imageUrl:editForm.imageUrl||"" },
+        editImageFile
+      );
       setMenu(m => ({...m, [data.item.category]: m[data.item.category]?.map(x =>
         (x._id||x.id)===(data.item._id||data.item.id) ? data.item : x
       ) || []}));
       setEditItem(null);
+      setEditImageFile(null);
       setToast("Menu item updated ✓");
     } catch { setToast("Failed to update item"); }
   }
@@ -142,12 +146,13 @@ export default function AdminDashboard() {
   async function saveNew() {
     if (!newItem.name || !newItem.price) { alert("Name and price required"); return; }
     try {
-      const data = await api.addMenuItem({
-        name:newItem.name, desc:newItem.desc, price:Number(newItem.price),
-        category:newItem.category, tag:newItem.tag, img:newItem.img,
-      });
+      const data = await api.addMenuItem(
+        { name:newItem.name, desc:newItem.desc, price:Number(newItem.price), category:newItem.category, tag:newItem.tag, img:newItem.img, imageUrl:newItem.imageUrl||"" },
+        newImageFile
+      );
       setMenu(m => ({...m, [data.item.category]: [...(m[data.item.category]||[]), data.item]}));
       setNewItem(null);
+      setNewImageFile(null);
       setToast("Item added ✓");
     } catch { setToast("Failed to add item"); }
   }
@@ -323,9 +328,15 @@ export default function AdminDashboard() {
                       <tbody>
                         {(menu[cat]||[]).map((item,i) => (
                           <tr key={item._id||item.id||i}>
-                            <td style={S.td}><span style={{fontSize:20,marginRight:8}}>{item.img}</span><strong>{item.name}</strong></td>
+                            <td style={S.td}>
+                              {item.imageUrl
+                                ? <img src={item.imageUrl} alt={item.name} style={{width:40,height:40,objectFit:"cover",borderRadius:4,marginRight:8,verticalAlign:"middle"}}/>
+                                : <span style={{fontSize:20,marginRight:8}}>{item.img}</span>
+                              }
+                              <strong>{item.name}</strong>
+                            </td>
                             <td style={S.td}><span style={{fontSize:12,color:"#8A7E74"}}>{item.desc}</span></td>
-                            <td style={S.td}><strong>${item.price}</strong></td>
+                            <td style={S.td}><strong>₹{item.price}</strong></td>
                             <td style={S.td}>{item.tag && <span style={{fontSize:10,padding:"3px 10px",borderRadius:20,background:"#FEF3C7",color:"#92400E",fontWeight:500}}>{item.tag}</span>}</td>
                             <td style={S.tdLast}>
                               <button style={S.approveBtn} onClick={() => openEdit(item)}>Edit</button>
@@ -390,6 +401,17 @@ export default function AdminDashboard() {
               </div>
             ))}
             <div style={S.formGroup}>
+              <label style={S.formLabel}>Image URL (optional)</label>
+              <input style={S.formInput} value={editForm.imageUrl||""} onChange={e => setEditForm(x => ({...x,imageUrl:e.target.value}))} placeholder="https://..." />
+            </div>
+            <div style={S.formGroup}>
+              <label style={S.formLabel}>Upload Image (optional)</label>
+              <input type="file" accept="image/*" style={{...S.formInput,padding:8}} onChange={e => setEditImageFile(e.target.files[0])} />
+              {(editForm.imageUrl || editImageFile) && (
+                <img src={editImageFile ? URL.createObjectURL(editImageFile) : editForm.imageUrl} alt="preview" style={{width:"100%",height:120,objectFit:"cover",borderRadius:4,marginTop:8}} />
+              )}
+            </div>
+            <div style={S.formGroup}>
               <label style={S.formLabel}>Category</label>
               <select style={S.formInput} value={editForm.category||"breakfast"} onChange={e => setEditForm(x => ({...x,category:e.target.value}))}>
                 <option value="breakfast">Breakfast</option>
@@ -416,6 +438,17 @@ export default function AdminDashboard() {
                 <input style={S.formInput} value={newItem[f]||""} onChange={e => setNewItem(x => ({...x,[f]:e.target.value}))} />
               </div>
             ))}
+            <div style={S.formGroup}>
+              <label style={S.formLabel}>Image URL (optional)</label>
+              <input style={S.formInput} value={newItem.imageUrl||""} onChange={e => setNewItem(x => ({...x,imageUrl:e.target.value}))} placeholder="https://..." />
+            </div>
+            <div style={S.formGroup}>
+              <label style={S.formLabel}>Upload Image (optional)</label>
+              <input type="file" accept="image/*" style={{...S.formInput,padding:8}} onChange={e => setNewImageFile(e.target.files[0])} />
+              {(newItem.imageUrl || newImageFile) && (
+                <img src={newImageFile ? URL.createObjectURL(newImageFile) : newItem.imageUrl} alt="preview" style={{width:"100%",height:120,objectFit:"cover",borderRadius:4,marginTop:8}} />
+              )}
+            </div>
             <div style={S.formGroup}>
               <label style={S.formLabel}>Category</label>
               <select style={S.formInput} value={newItem.category} onChange={e => setNewItem(x => ({...x,category:e.target.value}))}>
