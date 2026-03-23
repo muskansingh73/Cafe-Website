@@ -264,6 +264,18 @@ nav {
 .admin-stat-change { font-size: 12px; margin-top: 4px; }
 .change-up { color: #7A8C6E; }
 .change-down { color: #9B4A2A; }
+
+/* ── Admin Mobile Responsive ── */
+@media (max-width: 768px) {
+  /* Hide sidebar on mobile */
+  aside[style*="width:260"] ,
+  aside[style*="width: 260"] {
+    width: 100% !important;
+    position: relative !important;
+    height: auto !important;
+    min-height: unset !important;
+  }
+}
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
 .table-wrap { background: #FFFFFF; border: 1px solid #DDD5C8; border-radius: 4px; overflow: hidden; margin-bottom: 24px; }

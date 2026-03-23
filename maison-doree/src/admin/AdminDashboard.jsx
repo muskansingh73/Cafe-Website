@@ -4,8 +4,8 @@ import Toast from "../components/Toast";
 import { api } from "../services/api";
 
 const S = {
-  layout: { display:"flex", minHeight:"100vh", fontFamily:"'Jost',sans-serif" },
-  sidebar: { width:260, minWidth:260, background:"#3D2B1F", display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, bottom:0, zIndex:50, overflowY:"auto" },
+  layout: { display:"flex", minHeight:"100vh", fontFamily:"'Jost',sans-serif", flexDirection: window.innerWidth < 768 ? "column" : "row" },
+  sidebar: { width: window.innerWidth < 768 ? "100%" : 260, minWidth: window.innerWidth < 768 ? "unset" : 260, background:"#3D2B1F", display:"flex", flexDirection: window.innerWidth < 768 ? "row" : "column", position: window.innerWidth < 768 ? "fixed" : "fixed", top:0, left:0, bottom: window.innerWidth < 768 ? "unset" : 0, zIndex:50, overflowY:"auto", height: window.innerWidth < 768 ? 60 : "100vh", overflowX: window.innerWidth < 768 ? "auto" : "unset" },
   sidebarTop: { padding:"28px 20px", borderBottom:"1px solid rgba(255,255,255,0.08)" },
   userCard: { display:"flex", alignItems:"center", gap:12, background:"rgba(255,255,255,0.06)", borderRadius:6, padding:"12px 14px" },
   avatar: { width:36, height:36, background:"rgba(201,168,76,0.25)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 },
@@ -13,7 +13,7 @@ const S = {
   userRole: { fontSize:10, color:"#E8D5A3", opacity:0.7, letterSpacing:"0.08em", textTransform:"uppercase", marginTop:2 },
   navLabel: { fontSize:11, letterSpacing:"0.2em", textTransform:"uppercase", color:"#E8D5A3", padding:"20px 28px 12px", opacity:0.6 },
   signoutBtn: { width:"100%", padding:11, background:"rgba(155,74,42,0.2)", border:"1px solid rgba(155,74,42,0.4)", color:"rgba(245,239,228,0.7)", borderRadius:3, fontSize:12, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", fontFamily:"'Jost',sans-serif" },
-  content: { marginLeft:260, flex:1, background:"#FAF7F2", minHeight:"100vh", paddingTop:72 },
+  content: { marginLeft: window.innerWidth < 768 ? 0 : 260, flex:1, background:"#FAF7F2", minHeight:"100vh", paddingTop: window.innerWidth < 768 ? 60 : 72 },
   topbar: { position:"fixed", top:0, left:260, right:0, height:72, zIndex:40, background:"rgba(250,247,242,0.97)", borderBottom:"1px solid #DDD5C8", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 48px" },
   topbarTitle: { fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:300, color:"#3D2B1F" },
   userPill: { display:"flex", alignItems:"center", gap:12, background:"#F5EFE4", border:"1px solid #DDD5C8", borderRadius:24, padding:"8px 18px 8px 10px" },
@@ -51,6 +51,9 @@ const S = {
   cancelBtn: { flex:1, padding:14, background:"transparent", border:"1.5px solid #DDD5C8", borderRadius:2, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"'Jost',sans-serif" },
   saveBtn: { flex:2, padding:14, background:"#3D2B1F", color:"white", border:"none", borderRadius:2, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"'Jost',sans-serif" },
 };
+
+const isMobile = window.innerWidth < 768;
+const [sidebarOpen, setSidebarOpen] = useState(false);
 
 function badge(status) {
   const map = {
