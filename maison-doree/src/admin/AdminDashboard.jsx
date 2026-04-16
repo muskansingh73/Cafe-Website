@@ -4,8 +4,14 @@ import Toast from "../components/Toast";
 import { api } from "../services/api";
 
 const S = {
-  layout: { display:"flex", minHeight:"100vh", fontFamily:"'Jost',sans-serif", flexDirection: window.innerWidth < 768 ? "column" : "row" },
-  sidebar: { width: window.innerWidth < 768 ? "100%" : 260, minWidth: window.innerWidth < 768 ? "unset" : 260, background:"#3D2B1F", display:"flex", flexDirection: window.innerWidth < 768 ? "row" : "column", position: window.innerWidth < 768 ? "fixed" : "fixed", top:0, left:0, bottom: window.innerWidth < 768 ? "unset" : 0, zIndex:50, overflowY:"auto", height: window.innerWidth < 768 ? 60 : "100vh", overflowX: window.innerWidth < 768 ? "auto" : "unset" },
+  layout: { display:"flex", minHeight:"100vh", fontFamily:"'Jost',sans-serif" },
+  sidebar: (open) => ({ 
+    width:260, minWidth:260, background:"#3D2B1F", display:"flex", flexDirection:"column", 
+    position:"fixed", top:0, left:0, bottom:0, zIndex:100, overflowY:"auto",
+    transition:"transform 0.3s ease",
+    transform: window.innerWidth < 768 ? (open ? "translateX(0)" : "translateX(-100%)") : "translateX(0)",
+  }),
+  sidebarOverlay: { position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:99 },
   sidebarTop: { padding:"28px 20px", borderBottom:"1px solid rgba(255,255,255,0.08)" },
   userCard: { display:"flex", alignItems:"center", gap:12, background:"rgba(255,255,255,0.06)", borderRadius:6, padding:"12px 14px" },
   avatar: { width:36, height:36, background:"rgba(201,168,76,0.25)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 },
@@ -13,7 +19,7 @@ const S = {
   userRole: { fontSize:10, color:"#E8D5A3", opacity:0.7, letterSpacing:"0.08em", textTransform:"uppercase", marginTop:2 },
   navLabel: { fontSize:11, letterSpacing:"0.2em", textTransform:"uppercase", color:"#E8D5A3", padding:"20px 28px 12px", opacity:0.6 },
   signoutBtn: { width:"100%", padding:11, background:"rgba(155,74,42,0.2)", border:"1px solid rgba(155,74,42,0.4)", color:"rgba(245,239,228,0.7)", borderRadius:3, fontSize:12, fontWeight:500, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", fontFamily:"'Jost',sans-serif" },
-  content: { marginLeft: window.innerWidth < 768 ? 0 : 260, flex:1, background:"#FAF7F2", minHeight:"100vh", paddingTop: window.innerWidth < 768 ? 60 : 72 },
+  content: { marginLeft:260, flex:1, background:"#FAF7F2", minHeight:"100vh", paddingTop:72, transition:"margin 0.3s ease" },
   topbar: { position:"fixed", top:0, left:260, right:0, height:72, zIndex:40, background:"rgba(250,247,242,0.97)", borderBottom:"1px solid #DDD5C8", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 48px" },
   topbarTitle: { fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:300, color:"#3D2B1F" },
   userPill: { display:"flex", alignItems:"center", gap:12, background:"#F5EFE4", border:"1px solid #DDD5C8", borderRadius:24, padding:"8px 18px 8px 10px" },
@@ -52,9 +58,6 @@ const S = {
   saveBtn: { flex:2, padding:14, background:"#3D2B1F", color:"white", border:"none", borderRadius:2, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:"'Jost',sans-serif" },
 };
 
-const isMobile = window.innerWidth < 768;
-const [sidebarOpen, setSidebarOpen] = useState(false);
-
 function badge(status) {
   const map = {
     pending:          { background:"#FEF3C7", color:"#92400E" },
@@ -90,6 +93,14 @@ export default function AdminDashboard() {
   const [newImageFile,  setNewImageFile]  = useState(null);
   const [toast,         setToast]         = useState(null);
   const [orders,        setOrders]        = useState([]);
+  const [sidebarOpen,   setSidebarOpen]   = useState(false);
+  const [isMobile,      setIsMobile]      = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (adminUser) {
@@ -174,11 +185,33 @@ export default function AdminDashboard() {
     fontFamily:"'Jost',sans-serif", transition:"all 0.2s",
   });
 
+  function handleNavClick(id) {
+    setTab(id);
+    if (isMobile) setSidebarOpen(false);
+  }
+
   return (
     <div style={S.layout}>
 
+      {/* ── Mobile overlay when sidebar open ── */}
+      {isMobile && sidebarOpen && (
+        <div style={S.sidebarOverlay} onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside style={S.sidebar}>
+      <aside style={{
+        width:260, minWidth:260, background:"#3D2B1F", display:"flex", flexDirection:"column",
+        position:"fixed", top:0, left:0, bottom:0, zIndex:100, overflowY:"auto",
+        transition:"transform 0.3s ease",
+        transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-260px)") : "translateX(0)",
+      }}>
+        {/* Close button on mobile */}
+        {isMobile && (
+          <button onClick={() => setSidebarOpen(false)} style={{
+            position:"absolute", top:16, right:16, background:"none", border:"none",
+            color:"#F5EFE4", fontSize:20, cursor:"pointer", zIndex:10,
+          }}>✕</button>
+        )}
         <div style={S.sidebarTop}>
           <div style={S.userCard}>
             <div style={S.avatar}>{adminUser?.avatar}</div>
@@ -190,7 +223,7 @@ export default function AdminDashboard() {
         </div>
         <div style={S.navLabel}>Navigation</div>
         {NAV.map(n => (
-          <button key={n.id} style={navBtnStyle(tab===n.id)} onClick={() => setTab(n.id)}>
+          <button key={n.id} style={navBtnStyle(tab===n.id)} onClick={() => handleNavClick(n.id)}>
             <span>{n.icon}</span> {n.label}
           </button>
         ))}
@@ -200,28 +233,58 @@ export default function AdminDashboard() {
       </aside>
 
       {/* ── Main ── */}
-      <div style={S.content}>
-        <div style={S.topbar}>
-          <div style={S.topbarTitle}>{curNav?.icon} {curNav?.label}</div>
-          <div style={{display:"flex", alignItems:"center", gap:16}}>
-            <div style={S.userPill}>
-              <div style={S.pillAvatar}>{adminUser?.avatar}</div>
-              <div>
-                <div style={S.pillName}>{adminUser?.name}</div>
-                <div style={S.pillRole}>{adminUser?.role}</div>
+      <div style={{
+        marginLeft: isMobile ? 0 : 260,
+        flex:1, background:"#FAF7F2", minHeight:"100vh", paddingTop:72,
+        transition:"margin 0.3s ease",
+      }}>
+
+        {/* Topbar */}
+        <div style={{
+          position:"fixed", top:0,
+          left: isMobile ? 0 : 260,
+          right:0, height:72, zIndex:40,
+          background:"rgba(250,247,242,0.97)", borderBottom:"1px solid #DDD5C8",
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          padding: isMobile ? "0 16px" : "0 48px",
+        }}>
+          <div style={{display:"flex", alignItems:"center", gap:12}}>
+            {/* Hamburger on mobile */}
+            {isMobile && (
+              <button onClick={() => setSidebarOpen(true)} style={{
+                background:"none", border:"none", fontSize:22, cursor:"pointer",
+                color:"#3D2B1F", padding:"4px 8px",
+              }}>☰</button>
+            )}
+            <div style={S.topbarTitle}>{curNav?.icon} {curNav?.label}</div>
+          </div>
+          <div style={{display:"flex", alignItems:"center", gap:12}}>
+            {!isMobile && (
+              <div style={S.userPill}>
+                <div style={S.pillAvatar}>{adminUser?.avatar}</div>
+                <div>
+                  <div style={S.pillName}>{adminUser?.name}</div>
+                  <div style={S.pillRole}>{adminUser?.role}</div>
+                </div>
               </div>
-            </div>
-            <button style={S.logoutBtn} onClick={handleLogout}>Sign Out</button>
+            )}
+            <button style={S.logoutBtn} onClick={handleLogout}>
+              {isMobile ? "Out" : "Sign Out"}
+            </button>
           </div>
         </div>
 
-        <div style={S.page}>
+        <div style={{ padding: isMobile ? "24px 16px 48px" : "40px 48px 48px" }}>
 
           {/* ── OVERVIEW ── */}
           {tab==="overview" && <>
             <div style={S.pageTitle}>Good morning 👋</div>
             <div style={S.pageSubtitle}>Here's what's happening at Maison Dorée today.</div>
-            <div style={S.statsGrid}>
+            <div style={{
+              display:"grid",
+              gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)",
+              gap:16, marginBottom:36,
+            }}>
               <div style={S.statCard}>
                 <div style={S.statVal}>{reservations.length}</div>
                 <div style={S.statLabel}>Total Reservations</div>
@@ -245,24 +308,26 @@ export default function AdminDashboard() {
             </div>
             <div style={S.tableWrap}>
               <div style={S.tableHead}><span style={S.tableTitle}>Recent Reservations</span></div>
-              <table style={S.table}>
-                <thead><tr>
-                  <th style={S.th}>Guest</th>
-                  <th style={S.th}>Date & Time</th>
-                  <th style={S.th}>Guests</th>
-                  <th style={S.th}>Status</th>
-                </tr></thead>
-                <tbody>
-                  {reservations.slice(0,4).map((r,i) => (
-                    <tr key={r._id||r.id||i}>
-                      <td style={S.td}><strong>{r.name}</strong><br/><span style={{color:"#8A7E74",fontSize:12}}>{r.email}</span></td>
-                      <td style={S.td}>{r.date}<br/><span style={{color:"#8A7E74",fontSize:12}}>{r.time}</span></td>
-                      <td style={S.td}>{r.guests} pax</td>
-                      <td style={S.td}><span style={badge(r.status)}>{r.status}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{overflowX:"auto"}}>
+                <table style={S.table}>
+                  <thead><tr>
+                    <th style={S.th}>Guest</th>
+                    <th style={S.th}>Date & Time</th>
+                    <th style={S.th}>Guests</th>
+                    <th style={S.th}>Status</th>
+                  </tr></thead>
+                  <tbody>
+                    {reservations.slice(0,4).map((r,i) => (
+                      <tr key={r._id||r.id||i}>
+                        <td style={S.td}><strong>{r.name}</strong><br/><span style={{color:"#8A7E74",fontSize:12}}>{r.email}</span></td>
+                        <td style={S.td}>{r.date}<br/><span style={{color:"#8A7E74",fontSize:12}}>{r.time}</span></td>
+                        <td style={S.td}>{r.guests} pax</td>
+                        <td style={S.td}><span style={badge(r.status)}>{r.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>}
 
@@ -308,7 +373,7 @@ export default function AdminDashboard() {
 
           {/* ── MENU ── */}
           {tab==="menu" && <>
-            <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32, flexWrap:"wrap", gap:12}}>
               <div>
                 <div style={S.pageTitle}>Manage Menu</div>
                 <div style={S.pageSubtitle}>{allItems.length} items across all categories</div>
@@ -361,31 +426,33 @@ export default function AdminDashboard() {
             <div style={S.pageSubtitle}>Manage incoming delivery and pickup orders</div>
             <div style={S.tableWrap}>
               <div style={S.tableHead}><span style={S.tableTitle}>All Orders</span></div>
-              <table style={S.table}>
-                <thead><tr>
-                  <th style={S.th}>Order ID</th>
-                  <th style={S.th}>Customer</th>
-                  <th style={S.th}>Items</th>
-                  <th style={S.th}>Total</th>
-                  <th style={S.th}>Type</th>
-                  <th style={S.th}>Status</th>
-                </tr></thead>
-                <tbody>
-                  {orders.length===0 && (
-                    <tr><td colSpan={6} style={{...S.td, textAlign:"center", color:"#8A7E74"}}>No orders yet</td></tr>
-                  )}
-                  {orders.map((o,i) => (
-                    <tr key={o._id||i}>
-                      <td style={S.td}><strong>#{o._id?.slice(-6).toUpperCase()}</strong></td>
-                      <td style={S.td}>{o.customer?.name}<br/><span style={{fontSize:12,color:"#8A7E74"}}>{o.customer?.phone}</span></td>
-                      <td style={S.td}><span style={{fontSize:12,color:"#8A7E74"}}>{o.items?.map(x => `${x.name} x${x.qty}`).join(", ")}</span></td>
-                      <td style={S.td}><strong>₹{o.total}</strong></td>
-                      <td style={S.td}>{o.type}</td>
-                      <td style={S.td}><span style={badge(o.status)}>{o.status}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{overflowX:"auto"}}>
+                <table style={S.table}>
+                  <thead><tr>
+                    <th style={S.th}>Order ID</th>
+                    <th style={S.th}>Customer</th>
+                    <th style={S.th}>Items</th>
+                    <th style={S.th}>Total</th>
+                    <th style={S.th}>Type</th>
+                    <th style={S.th}>Status</th>
+                  </tr></thead>
+                  <tbody>
+                    {orders.length===0 && (
+                      <tr><td colSpan={6} style={{...S.td, textAlign:"center", color:"#8A7E74"}}>No orders yet</td></tr>
+                    )}
+                    {orders.map((o,i) => (
+                      <tr key={o._id||i}>
+                        <td style={S.td}><strong>#{o._id?.slice(-6).toUpperCase()}</strong></td>
+                        <td style={S.td}>{o.customer?.name}<br/><span style={{fontSize:12,color:"#8A7E74"}}>{o.customer?.phone}</span></td>
+                        <td style={S.td}><span style={{fontSize:12,color:"#8A7E74"}}>{o.items?.map(x => `${x.name} x${x.qty}`).join(", ")}</span></td>
+                        <td style={S.td}><strong>₹{o.total}</strong></td>
+                        <td style={S.td}>{o.type}</td>
+                        <td style={S.td}><span style={badge(o.status)}>{o.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>}
 

@@ -276,6 +276,48 @@ nav {
     min-height: unset !important;
   }
 }
+
+
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column !important;
+  }
+
+  .admin-sidebar {
+    width: 100vw !important;
+    min-width: unset !important;
+    height: auto !important;
+    position: relative !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 !important;
+  }
+
+  .admin-content {
+    margin-left: 0 !important;
+    padding-top: 16px !important;
+  }
+
+  .admin-topbar {
+    left: 0 !important;
+    padding: 0 16px !important;
+  }
+
+  .admin-page {
+    padding: 16px !important;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
 /* ── TABLE ───────────────────────────────────────────────────────────────── */
 .table-wrap { background: #FFFFFF; border: 1px solid #DDD5C8; border-radius: 4px; overflow: hidden; margin-bottom: 24px; }
